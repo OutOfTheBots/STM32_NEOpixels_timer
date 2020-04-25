@@ -91,7 +91,7 @@ int main(void){
 
   uint8_t i;
   for (i = 0; i < 10; ++i){ //fill first 10 LEDs green
-	  LED_data[i*3] = 10;
+	  LED_data[i*3] = 255;
   }
   for (i = 10; i < 20; ++i){ //fill next 10 LEDs red
 	  LED_data[i*3+1] = 250;
