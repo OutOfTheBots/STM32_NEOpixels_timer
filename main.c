@@ -1,5 +1,5 @@
 /**
-Copyright (c) 2018 Out of the BOTS
+Copyright (c) 2020 Out of the BOTS
 MIT License (MIT) 
 Author: Shane Gingell
 Permission is hereby granted, free of charge, to any person obtaining a copy
