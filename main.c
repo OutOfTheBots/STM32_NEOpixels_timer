@@ -2,7 +2,6 @@
 #include "stm32f4xx_hal.h"
 
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
 
 
 #define timer_freq 84.0  //timer clock freq in MHz
