@@ -24,8 +24,6 @@ void Neopixel_setup(void){
 	GPIOD->MODER |= GPIO_MODER_MODER12_1; //setup pin 12 on port d to AF mode
 	GPIOD->AFR[1] = (GPIOD->AFR[1] & (0b1111<<(4*(12-8))) | 0b0010<<(4*(12-8))); //setup pin 12 on port D to AF timer 2-5
 
-
-
 	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN; //enable the timer4 clock
 	TIM4->PSC = 0;   //set prescale to zero as timer has to go as fast as posible
 	TIM4->CCMR1 = (TIM4->CCMR1 & ~(0b110<<4)) | (0b110<<4); //set PWM mode 110
