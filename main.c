@@ -1,26 +1,3 @@
-/**
-Copyright (c) 2020 Out of the BOTS
-MIT License (MIT) 
-Author: Shane Gingell
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in
-ll copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-*/
-
-
-
 #include "main.h"
 #include "stm32f4xx_hal.h"
 
@@ -43,7 +20,14 @@ uint8_t LED_data[180]; //I have strip with 60 LEDs and need 3 bytes/LED
 
 
 void Neopixel_setup(void){
-	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
+
+	RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN; //enable port D clock
+	GPIOD->MODER |= GPIO_MODER_MODER12_1; //setup pin 12 on port d to AF mode
+	GPIOD->AFR[1] = (GPIOD->AFR[1] & (0b1111<<(4*(12-8))) | 0b0010<<(4*(12-8))); //setup pin 12 on port D to AF timer 2-5
+
+
+
+	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN; //enable the timer4 clock
 	TIM4->PSC = 0;   //set prescale to zero as timer has to go as fast as posible
 	TIM4->CCMR1 = (TIM4->CCMR1 & ~(0b110<<4)) | (0b110<<4); //set PWM mode 110
 	TIM4->CCER &= ~TIM_CCER_CC1E; //disable output to pin so that it will be low until transmission starts.
@@ -84,8 +68,6 @@ int main(void){
   HAL_Init();
   SystemClock_Config();  //this is a cube_MX function for setting up all the clocks
 
-  MX_GPIO_Init(); //this is a cube_MX function that setups pin D12 to AF timer pin
-
   Neopixel_setup(); //setup the neopixels
 
 
@@ -94,7 +76,7 @@ int main(void){
 	  LED_data[i*3] = 255;
   }
   for (i = 10; i < 20; ++i){ //fill next 10 LEDs red
-	  LED_data[i*3+1] = 250;
+	  LED_data[i*3+1] = 255;
   }
   for (i = 20; i < 30; ++i){  //fill next 10 LEDs blue
 	  LED_data[i*3+2] = 255;
@@ -201,37 +183,6 @@ void SystemClock_Config(void)
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
-/** Configure pins as 
-        * Analog 
-        * Input 
-        * Output
-        * EVENT_OUT
-        * EXTI
-     PD12   ------> S_TIM4_CH1
-*/
-static void MX_GPIO_Init(void)
-{
-
-  GPIO_InitTypeDef GPIO_InitStruct;
-
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
-
-  /*Configure GPIO pin : PD12 */
-  GPIO_InitStruct.Pin = GPIO_PIN_12;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
-}
-
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
 
 /**
   * @brief  This function is executed in case of error occurrence.
@@ -268,12 +219,3 @@ void assert_failed(uint8_t* file, uint32_t line)
 
 #endif
 
-/**
-  * @}
-  */ 
-
-/**
-  * @}
-*/ 
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
