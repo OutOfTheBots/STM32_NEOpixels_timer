@@ -10,33 +10,53 @@ void SystemClock_Config(void);
 #define T0L 2.0
 #define T1L 1.3
 
-long double period;
+
+
+uint8_t LED_data[180]; //I have strip with 60 LEDs and need 3 bytes/LED
 
 uint16_t pos;
 uint8_t mask = 0B10000000;
+uint8_t lastbit;
+
+long double period;
 uint16_t low_CCR1, low_ARR, high_CCR1, high_ARR;
-uint8_t LED_data[180]; //I have strip with 60 LEDs and need 3 bytes/LED
+
+
 
 
 void Neopixel_setup(void){
 
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN; //enable port D clock
+
 	GPIOD->MODER |= GPIO_MODER_MODER12_1; //setup pin 12 on port d to AF mode
+
 	GPIOD->AFR[1] = (GPIOD->AFR[1] & (0b1111<<(4*(12-8))) | 0b0010<<(4*(12-8))); //setup pin 12 on port D to AF timer 2-5
 
+
+
 	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN; //enable the timer4 clock
+
 	TIM4->PSC = 0;   //set prescale to zero as timer has to go as fast as posible
+
 	TIM4->CCMR1 = (TIM4->CCMR1 & ~(0b110<<4)) | (0b110<<4); //set PWM mode 110
+
 	TIM4->CCER &= ~TIM_CCER_CC1E; //disable output to pin so that it will be low until transmission starts.
+
 	TIM4->CR1 &= ~TIM_CR1_CEN; //Disable channel 1. This bit is used to start and stop transmission.
+
 	TIM4->CR1 |= TIM_CR1_ARPE; //this allows for imediate updates for register to take effect
+
 	TIM4->DIER = TIM_DIER_UIE; // Enable update interrupt (timer level)
+
 	NVIC_EnableIRQ(TIM4_IRQn); // Enable interrupt(NVIC level)
+
 
 	//calculate all the timings.
 	period = 1 / timer_freq;
+
 	low_CCR1 = round(T0H / period);
 	low_ARR = round((T0H + T0L) / period);
+
 	high_CCR1 = round(T1H / period);
 	high_ARR = round((T1H + T1L) / period);
 }
@@ -54,6 +74,7 @@ void show_neopixels(){
 			}
 
 	pos = 0; //set the interupt to start at first byte
+	lastbit = 0;
 	mask = 0B01000000; //set the interupt to start at second bit
 	TIM4->CCER |= TIM_CCER_CC1E; //enable output to pin
 	TIM4->CR1 |= TIM_CR1_CEN;    //enable channel 1
@@ -65,30 +86,14 @@ int main(void){
   HAL_Init();
   SystemClock_Config();  //this is a cube_MX function for setting up all the clocks
 
+
   Neopixel_setup(); //setup the neopixels
 
-
-  uint8_t i;
-  for (i = 0; i < 10; ++i){ //fill first 10 LEDs green
-	  LED_data[i*3] = 255;
-  }
-  for (i = 10; i < 20; ++i){ //fill next 10 LEDs red
-	  LED_data[i*3+1] = 255;
-  }
-  for (i = 20; i < 30; ++i){  //fill next 10 LEDs blue
-	  LED_data[i*3+2] = 255;
-  }
-  for (i = 30; i < 40; ++i){  //fill next 10 LEDs yellow
-	  LED_data[i*3] = 255;
-	  LED_data[i*3+1] = 255;
-  }
-  for (i = 40; i < 50; ++i){  //fill next 10 LEDs purple
-	  LED_data[i*3+1] = 255;
-	  LED_data[i*3+2] = 255;
-  }
-  for (i = 50; i < 60; ++i){  //fill last 10 LEDs orange
-	  LED_data[i*3] = 165;
-	  LED_data[i*3+1] = 255;
+  //fill the array with repeate pattern of Green-Red-Blue
+  for (uint8_t i = 0; i < 180; i+=9){
+	  LED_data[i] = 25;  //use low values so that it does blind the camera
+	  LED_data[i+4] = 25;
+	  LED_data[i+8] = 25;
   }
 
   show_neopixels();  //transmit the data to the neopixel strip.
@@ -117,8 +122,11 @@ void TIM4_IRQHandler(void){
 			pos+=1;
 		}else mask = mask >> 1;
 	}else{
+		if(lastbit){
 		TIM4->CCER &= ~TIM_CCER_CC1E; //disable output to pin so that it will be low.
 		TIM4->CR1 &= ~TIM_CR1_CEN; //Disable channel 1
+		}
+		lastbit = 1;
 	}
 }
 
