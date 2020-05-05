@@ -16,7 +16,6 @@ uint8_t LED_data[180]; //I have strip with 60 LEDs and need 3 bytes/LED
 
 uint16_t pos;
 uint8_t mask = 0B10000000;
-uint8_t lastbit;
 
 long double period;
 uint16_t low_CCR1, low_ARR, high_CCR1, high_ARR;
@@ -70,9 +69,7 @@ void Neopixel_setup(void){
 
 void show_neopixels(){
 	pos = 0; //set the interupt to start at first byte
-	lastbit = 0;
 	mask = 0B10000000; //set the interupt to start at second bit
-
 	TIM4->DIER |= TIM_DIER_UIE; //enable interupt flag to be generated to start transmission
 }
 
@@ -85,9 +82,8 @@ int main(void){
 
   Neopixel_setup(); //setup the neopixels
 
-
   while (1){
-	  //fill the array with repeate pattern of Green-Red-Blue
+	  //fill the array with repeate pattern of off-0ff-Blue
 	  for (uint8_t i = 0; i < 180; i+=9){
 		  LED_data[i] = 0;  //use low values so that it does blind the camera
 		  LED_data[i+4] = 0;
