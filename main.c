@@ -94,9 +94,8 @@ int main(void){
 
 
 void TIM4_IRQHandler(void){
-	if(TIM4->SR & TIM_SR_UIF){ // if UIF flag is set
-		TIM4->SR &= ~TIM_SR_UIF; // clear UIF flag
-	}
+	TIM4->SR &= ~TIM_SR_UIF; // clear UIF flag
+
 
 	if(pos<sizeof(LED_data)){
 		if(LED_data[pos] & mask){
