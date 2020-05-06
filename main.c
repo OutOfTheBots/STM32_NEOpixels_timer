@@ -52,7 +52,7 @@ void Neopixel_setup(void){
 
 void show_neopixels(){
 	pos = 0; //set the interupt to start at first byte
-	mask = 0B10000000; //set the interupt to start at second bit
+	mask = 0B10000000; //set the interupt to start at first bit
 	TIM4->DIER |= TIM_DIER_UIE; //enable interupt flag to be generated to start transmission
 }
 
