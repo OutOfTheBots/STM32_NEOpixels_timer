@@ -9,6 +9,7 @@ void SystemClock_Config(void);
 #define T1H 1.2  //timing here are in us
 #define T0L 2.0
 #define T1L 1.3
+#define Treset 50
 
 uint8_t LED_data[180]; //I have strip with 60 LEDs and need 3 bytes/LED
 
@@ -17,10 +18,18 @@ uint8_t mask = 0B10000000;
 uint8_t lastbit;
 
 long double period;
-uint16_t low_CCR1, low_ARR, high_CCR1, high_ARR;
+uint16_t low_CCR1, low_ARR, high_CCR1, high_ARR, treset_ARR;
 
 
 void Neopixel_setup(void){
+
+	//calculate all the timings.
+	period = 1 / timer_freq;
+	low_CCR1 = round(T0H / period);
+	low_ARR = round((T0H + T0L) / period);
+	high_CCR1 = round(T1H / period);
+	high_ARR = round((T1H + T1L) / period);
+	treset_ARR = ceil(Treset / period);
 
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN; //enable port D clock
 	GPIOD->MODER |= GPIO_MODER_MODER12_1; //setup pin 12 on port d to AF mode
@@ -30,7 +39,7 @@ void Neopixel_setup(void){
 	TIM4->PSC = 0;   //set prescale to zero as timer has to go as fast as posible
 	TIM4->CCMR1 = (TIM4->CCMR1 & ~(0b110<<4)) | (0b110<<4); //set PWM mode 110
 	TIM4->CCR1 = 0; //set to zero so that the pin stay low until transmission
-	TIM4->ARR = 100; //dummy amount shouldn't matter as long as not too low
+	TIM4->ARR = treset_ARR; //set to timing for reset LEDs
 	TIM4->CCER |= TIM_CCER_CC1E; //enable output to pin.
 	TIM4->CR1 |= TIM_CR1_CEN; //Disable channel 1. This bit is used to start and stop transmission.
 	TIM4->CR1 |= TIM_CR1_ARPE; //buffer ARR
@@ -39,16 +48,6 @@ void Neopixel_setup(void){
 	TIM4->CR1 |= TIM_CR1_CEN; //enable channel 1.
 
 	NVIC_EnableIRQ(TIM4_IRQn); // Enable interrupt(NVIC level)
-
-
-	//calculate all the timings.
-	period = 1 / timer_freq;
-
-	low_CCR1 = round(T0H / period);
-	low_ARR = round((T0H + T0L) / period);
-
-	high_CCR1 = round(T1H / period);
-	high_ARR = round((T1H + T1L) / period);
 }
 
 
@@ -60,6 +59,11 @@ void show_neopixels(){
 	TIM4->CNT = 0; //reset timer to zero
 	TIM4->SR &= ~TIM_SR_UIF; // clear UIF flag
 	TIM4->DIER |= TIM_DIER_UIE; //enable interupt flag to be generated to start transmission
+}
+
+
+uint8_t neopoxel_transmitting(){
+	return (TIM4->DIER & TIM_DIER_UIE) && 1;
 }
 
 
@@ -118,6 +122,7 @@ void TIM4_IRQHandler(void){
 			}else mask = mask >> 1;
 		}else{
 			TIM4->CCR1 = 0; //set to zero so that pin stays low
+			TIM4->ARR = treset_ARR; //set to timing for reset LEDs
 			TIM4->DIER &= ~TIM_DIER_UIE; //disable interrupt flag to end transmission.
 		}
 }
