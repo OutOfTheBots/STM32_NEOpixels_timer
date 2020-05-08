@@ -10,8 +10,6 @@ void SystemClock_Config(void);
 #define T0L 2.0
 #define T1L 1.3
 
-
-
 uint8_t LED_data[180]; //I have strip with 60 LEDs and need 3 bytes/LED
 
 uint16_t pos;
@@ -20,8 +18,6 @@ uint8_t lastbit;
 
 long double period;
 uint16_t low_CCR1, low_ARR, high_CCR1, high_ARR;
-
-
 
 
 void Neopixel_setup(void){
@@ -105,7 +101,8 @@ int main(void){
 
 
 void TIM4_IRQHandler(void){
-	if(TIM4->SR & TIM_SR_UIF){ // if UIF flag is set
+
+	TIM4->SR &= ~TIM_SR_UIF; // clear UIF flag
 
 		if(pos<sizeof(LED_data)){
 			if(LED_data[pos] & mask){
@@ -123,8 +120,6 @@ void TIM4_IRQHandler(void){
 			TIM4->CCR1 = 0; //set to zero so that pin stays low
 			TIM4->DIER &= ~TIM_DIER_UIE; //disable interrupt flag to end transmission.
 		}
-		TIM4->SR &= ~TIM_SR_UIF; // clear UIF flag
-	}
 }
 
 
