@@ -10,34 +10,52 @@ void SystemClock_Config(void);
 #define T0L 2.0
 #define T1L 1.3
 
+
+
 uint8_t LED_data[180]; //I have strip with 60 LEDs and need 3 bytes/LED
 
 uint16_t pos;
 uint8_t mask = 0B10000000;
+uint8_t lastbit;
 
 long double period;
 uint16_t low_CCR1, low_ARR, high_CCR1, high_ARR;
 
 
+
+
 void Neopixel_setup(void){
 
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN; //enable port D clock
+
 	GPIOD->MODER |= GPIO_MODER_MODER12_1; //setup pin 12 on port d to AF mode
+
 	GPIOD->AFR[1] = (GPIOD->AFR[1] & (0b1111<<(4*(12-8))) | 0b0010<<(4*(12-8))); //setup pin 12 on port D to AF timer 2-5
 
 	RCC->APB1ENR |= RCC_APB1ENR_TIM4EN; //enable the timer4 clock
+
 	TIM4->PSC = 0;   //set prescale to zero as timer has to go as fast as posible
+
 	TIM4->CCMR1 = (TIM4->CCMR1 & ~(0b110<<4)) | (0b110<<4); //set PWM mode 110
+
 	TIM4->CCR1 = 0; //set to zero so that the pin stay low until transmission
+
 	TIM4->ARR = 100; //dummy amount shouldn't matter as long as not too low
+
 	TIM4->CCER |= TIM_CCER_CC1E; //enable output to pin.
+
 	TIM4->CR1 |= TIM_CR1_CEN; //Disable channel 1. This bit is used to start and stop transmission.
+
 	TIM4->CR1 |= TIM_CR1_ARPE; //buffer ARR
+
 	TIM4->CCMR1 |= TIM_CCMR1_OC1PE; //buffer CCR1
+
 	TIM4->DIER &= ~TIM_DIER_UIE; // ensure we are not enabling interrupt flag to be generated this bit is used to start/stop transmission
+
 	TIM4->CR1 |= TIM_CR1_CEN; //enable channel 1.
 
 	NVIC_EnableIRQ(TIM4_IRQn); // Enable interrupt(NVIC level)
+
 
 	//calculate all the timings.
 	period = 1 / timer_freq;
@@ -52,7 +70,9 @@ void Neopixel_setup(void){
 
 void show_neopixels(){
 	pos = 0; //set the interupt to start at first byte
-	mask = 0B10000000; //set the interupt to start at first bit
+	lastbit = 0;
+	mask = 0B10000000; //set the interupt to start at second bit
+
 	TIM4->DIER |= TIM_DIER_UIE; //enable interupt flag to be generated to start transmission
 }
 
@@ -65,8 +85,9 @@ int main(void){
 
   Neopixel_setup(); //setup the neopixels
 
+
   while (1){
-	  //fill the array with repeate pattern of off-0ff-Blue
+	  //fill the array with repeate pattern of Green-Red-Blue
 	  for (uint8_t i = 0; i < 180; i+=9){
 		  LED_data[i] = 0;  //use low values so that it does blind the camera
 		  LED_data[i+4] = 0;
@@ -94,24 +115,25 @@ int main(void){
 
 
 void TIM4_IRQHandler(void){
-	TIM4->SR &= ~TIM_SR_UIF; // clear UIF flag
+	if(TIM4->SR & TIM_SR_UIF){ // if UIF flag is set
 
-
-	if(pos<sizeof(LED_data)){
-		if(LED_data[pos] & mask){
-			TIM4->CCR1 = high_CCR1;
-			TIM4->ARR = high_ARR;
+		if(pos<sizeof(LED_data)){
+			if(LED_data[pos] & mask){
+				TIM4->CCR1 = high_CCR1;
+				TIM4->ARR = high_ARR;
+			}else{
+				TIM4->CCR1 = low_CCR1;
+				TIM4->ARR = low_ARR;
+			}
+			if(mask==1){
+				mask = 0B10000000;
+				pos+=1;
+			}else mask = mask >> 1;
 		}else{
-			TIM4->CCR1 = low_CCR1;
-			TIM4->ARR = low_ARR;
+			TIM4->CCR1 = 0; //set to zero so that pin stays low
+			TIM4->DIER &= ~TIM_DIER_UIE; //disable interrupt flag to end transmission.
 		}
-		if(mask==1){
-			mask = 0B10000000;
-			pos+=1;
-		}else mask = mask >> 1;
-	}else{
-		TIM4->CCR1 = 0; //set to zero so that pin stays low
-		TIM4->DIER &= ~TIM_DIER_UIE; //disable interrupt flag to end transmission.
+		TIM4->SR &= ~TIM_SR_UIF; // clear UIF flag
 	}
 }
 
