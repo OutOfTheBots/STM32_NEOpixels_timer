@@ -56,7 +56,6 @@ void show_neopixels(){
 	lastbit = 0;
 	mask = 0B10000000; //set the interupt to start at second bit
 
-	TIM4->CNT = 0; //reset timer to zero
 	TIM4->SR &= ~TIM_SR_UIF; // clear UIF flag
 	TIM4->DIER |= TIM_DIER_UIE; //enable interupt flag to be generated to start transmission
 }
